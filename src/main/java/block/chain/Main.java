@@ -19,16 +19,26 @@ public class Main {
     public static void main(String[] args) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
 
 
-        //user, full 생성
+        /**
+         * user, full 생성
+         */
+        //user0, full1
         FullNode fullNode0 = new FullNode();
         UserNode userNode0 = new UserNode();
+        //user1, full1
         FullNode fullNode1 = new FullNode();
         UserNode userNode1 = new UserNode();
 
+
+        /**
+         * master 생성
+         */
         Master master = new Master(List.of(fullNode0, fullNode1));
 
 
-        //유저가 pubkey를 알아야해서
+        /**
+         * 유저 pubKey 모음
+         */
         List<String> pubKeyList = new ArrayList<>();
         //연결
         pubKeyList.add(userNode0.getPublicKey());
@@ -37,9 +47,13 @@ public class Main {
         userNode1.setUsersPublicKeyList(pubKeyList);
 
 
-        //데이터 전송을 위한 공유 메모리
+        /**
+         * 데이터 전송을 위한 공유메모리 생성
+         */
+        //user0, full0
         FullResource full0Resource = new FullResource();
         UserResource user0Resource = new UserResource();
+        //user1, full1
         FullResource full1Resource = new FullResource();
         UserResource user1Resource = new UserResource();
 
@@ -68,7 +82,9 @@ public class Main {
         ReceiveBlockAndConsensus full1ReceiveBlock = new ReceiveBlockAndConsensus(full1Resource, fullNode1);
 
 
-
+        /**
+         * 실행
+         */
         new Thread(user0MakeTransactionAndSendIt).start();
         new Thread(user0ReceiveTransaction).start();
         new Thread(full0ReceiveTransaction).start();
