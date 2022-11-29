@@ -136,9 +136,10 @@ class DigiSigTest {
         Block block = new Block(1, 0L, null, merkleTree.getRootHashValue(), merkleTree);
         String prevHash = SHA256.encrypt(block);
         long beforeTime = System.currentTimeMillis();
-
+        System.out.println("beforeTime = " + beforeTime);
         difficulty(random, merkleTree, prevHash);
         long afterTime = System.currentTimeMillis();
+        System.out.println("afterTime = " + afterTime);
         long secDiffTime = (afterTime - beforeTime)/1000;
         System.out.println("시간차이(s) : "+secDiffTime);
     }

@@ -127,7 +127,7 @@ public class FullNode {
             Block nextBlock = new Block(blockNo, nonce, prevHash, merkleTree.getRootHashValue(), merkleTree);
             String encrypt = SHA256.encrypt(nextBlock);
             for(int i=0; i<64; i++){
-                if(i==4){
+                if(i==5){
                     return nextBlock;
                 }else{
                     if(encrypt.charAt(i)!='0'){

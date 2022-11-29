@@ -32,6 +32,7 @@ public class MineBlockAndSendIt implements Runnable {
         try {
             while(true){
                 Block mining = fullNode.mining();
+                System.out.println("채굴");
                 fullNode.consensusLongestChain(mining);
                 for (FullResource fullResource : otherFullResource) {
                     fullResource.addBlock(mining);

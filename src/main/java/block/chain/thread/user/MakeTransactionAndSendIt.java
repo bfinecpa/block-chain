@@ -22,7 +22,7 @@ public class MakeTransactionAndSendIt implements Runnable{
 
     @Override
     public void run() {
-        for(int i=0; i<8; i++){
+        for(int i=0; i<3; i++){
             try {
                 fullResource.addTransactionToFull(userNode.makeFirstTransaction(i));
             } catch (NoSuchAlgorithmException e) {
@@ -35,9 +35,10 @@ public class MakeTransactionAndSendIt implements Runnable{
                 throw new RuntimeException(e);
             }
         }
-        for(int i=0; i<1000; i++){
+        while(true){
             try {
-                fullResource.addTransactionToFull(userNode.makeTransaction(i));
+                fullResource.addTransactionToFull(userNode.makeTransaction());
+                Thread.sleep(5000);
             } catch (InvalidKeyException e) {
                 throw new RuntimeException(e);
             } catch (NoSuchAlgorithmException e) {

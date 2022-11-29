@@ -18,8 +18,14 @@ public class UserNode {
     private PrivateKey privateKey;
     private List<String> usersPublicKeyList;
 
+    private String name;
+
     private Queue<Transaction> transactionHaving = new LinkedList<>();
 
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public void setUsersPublicKeyList(List<String> usersPublicKeyList) {
         this.usersPublicKeyList = usersPublicKeyList;
@@ -42,7 +48,7 @@ public class UserNode {
         Random random = new Random();
         random.setSeed(System.currentTimeMillis());
 
-        Transaction transaction = new Transaction(publicKey, getRandomPubKey(),  random.nextLong(), "item_"+number,
+        Transaction transaction = new Transaction(publicKey, getRandomPubKey(),  random.nextLong(), name+"'s item_"+number,
                 LocalDate.now(), LocalDate.now(), "first");
 
         Signature ecdsaSign = Signature.getInstance(ALGO);
@@ -60,7 +66,7 @@ public class UserNode {
     }
 
 
-    public TransactionDto makeTransaction(int number) throws InvalidKeyException, NoSuchAlgorithmException, IOException, SignatureException, InterruptedException {
+    public TransactionDto makeTransaction() throws InvalidKeyException, NoSuchAlgorithmException, IOException, SignatureException, InterruptedException {
         Random random = new Random();
         random.setSeed(System.currentTimeMillis());
 
