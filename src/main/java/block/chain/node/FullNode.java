@@ -42,6 +42,9 @@ public class FullNode {
         blockPool.add(block);
     }
 
+    public List<Block> getBlockPool() {
+        return blockPool;
+    }
 
     public void consensusLongestChain(Block block) throws NoSuchAlgorithmException, IOException {
         Block lastBlock = myLongestChain.getLastBlock();

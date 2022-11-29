@@ -37,7 +37,7 @@ public class Master implements Runnable{
                         printFullNode(fullNodeList.get(i));
                     }
                 }
-                else if (input.equals("F")) {
+                else if (input.contains("F")) {
                     int f = input.indexOf("F");
                     char c = input.charAt(f+1);
                     int numericValue = Character.getNumericValue(c);

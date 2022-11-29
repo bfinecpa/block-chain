@@ -16,10 +16,15 @@ public class ReceiveBlockAndConsensus implements Runnable{
 
     private FullNode fullNode;
 
+    private List<FullResource> otherFullResources = new ArrayList<>();
 
-    public ReceiveBlockAndConsensus(FullResource fullResource, FullNode fullNode) {
+
+    public ReceiveBlockAndConsensus(FullResource fullResource, FullNode fullNode ,FullResource ...otherResource) {
         this.fullResource = fullResource;
         this.fullNode = fullNode;
+        for (FullResource resource : otherResource) {
+            otherFullResources.add(resource);
+        }
     }
 
     @Override
@@ -35,7 +40,16 @@ public class ReceiveBlockAndConsensus implements Runnable{
                 }
             }else {
                 try {
+                    List<Block> blockPool = fullNode.getBlockPool();
+                    if(blockPool.contains(blockReceived)){
+                        continue;
+                    }
                     fullNode.addBlockInBlockPool(blockReceived);
+                    //다른 full node에게 보내 줘야함
+                    for (FullResource otherFullResource : otherFullResources) {
+                        otherFullResource.addBlock(blockReceived);
+                    }
+                    //확인
                     fullNode.consensusLongestChain(blockReceived);
                 } catch (NoSuchAlgorithmException e) {
                     throw new RuntimeException(e);
