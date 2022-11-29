@@ -12,7 +12,6 @@ public class ResourceTransferredFromUserToFull {
 
     public void addTransactionToFull(TransactionDto transactionDto){
         transferTransactionToFull.add(transactionDto);
-        System.out.println("트랜잭션을 full에게 보냈습니다.");
     }
 
     public void addTransactionToUser(TransactionDto transactionDto){

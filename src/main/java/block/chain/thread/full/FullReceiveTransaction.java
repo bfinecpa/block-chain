@@ -43,7 +43,6 @@ public class FullReceiveTransaction implements Runnable{
             TransactionDto transactionDto = transferTransaction.poll();
             if(transactionDto==null){
                 try {
-                    System.out.println("Full이 받을 트랜잭션이 없어서 1초 쉬는중 ");
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
@@ -52,7 +51,6 @@ public class FullReceiveTransaction implements Runnable{
                 try {
                     if(fullNode.receiveTransactionAndTransfer(transactionDto)){
                         userResource.addTransactionToUser(transactionDto);
-                        System.out.println("full이 유저에게 트랜잭션을 보냈습니다.");
                         for (FullResource fullResource : otherFullResource) {
                             fullResource.addTransactionToFull(transactionDto);
                         }

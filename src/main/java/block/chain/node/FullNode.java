@@ -53,7 +53,6 @@ public class FullNode {
         String encrypt = SHA256.encrypt(lastBlock);
         if(encrypt.equals(block.getPrevHash()) && blockNo==lastBlock.getBlockNo()+1){
             myLongestChain.addBlock(block);
-            System.out.println("체인에 연결했습니다.");
             return;
         }
         if(blockNo==lastBlock.getBlockNo()+1){
@@ -104,7 +103,6 @@ public class FullNode {
             }
             TransactionDto poll = transactionPool.poll();
             if(poll==null){
-                System.out.println("마이닝하는데 받은 트랜잭션이 없어서 1초 쉽니다.");
                 Thread.sleep(1000);
                 continue;
             }
@@ -119,7 +117,6 @@ public class FullNode {
         Random random = new Random();
         random.setSeed(System.currentTimeMillis());
         Block blockMined = difficulty(random, merkleTree, prevBlockHash, blockNo);
-        System.out.println(blockMined.getBlockNo()+"번 블록을 채굴하였습니다.");
         lastMiningBlock = blockMined;
         return blockMined;
     }
@@ -191,7 +188,7 @@ public class FullNode {
     public boolean receiveTransactionAndTransfer(TransactionDto transactionDto) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException, SignatureException, InvalidKeyException {
         if(!transactionPool.contains(transactionDto)){
             transactionPool.add(transactionDto);
-            System.out.println("풀노드가 없었던 트랜잭션을 받았습니다.");
+
             return true;
         }
         return false;

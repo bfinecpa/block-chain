@@ -26,14 +26,12 @@ public class UserReceiveTransaction implements Runnable{
             TransactionDto transactionDto = transferTransaction.poll();
             if(transactionDto==null){
                 try {
-                    System.out.println("유저가 트랜잭션을 받는데 트랜잭션이 없어서 1초 쉽니다.");
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }else{
                 userNode.readTransaction(transactionDto);
-                System.out.println("유저노드가 트랜잭션을 받았습니다.");
             }
         }
     }

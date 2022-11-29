@@ -37,7 +37,6 @@ public class FullReceiveTransactionNoneUser implements Runnable{
             TransactionDto transactionDto = transferTransaction.poll();
             if(transactionDto==null){
                 try {
-                    System.out.println("Full이 받을 트랜잭션이 없어서 1초 쉬는중 ");
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);

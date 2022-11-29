@@ -60,7 +60,7 @@ public class Block  implements Serializable {
     }
 
     public void printBlockMined(){
-        System.out.println("blockNo = " + blockNo + "인 블록이 채굴 되었습니다.");
+
     }
 
 }

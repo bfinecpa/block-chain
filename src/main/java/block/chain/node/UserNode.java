@@ -55,7 +55,7 @@ public class UserNode {
         String sig = Base64.getEncoder().encodeToString(signature);
         String trId = SHA256.encrypt(transaction);
 
-        System.out.println("초기 트랜잭션을 만들었습니다.");
+
         return new TransactionDto(transaction, trId, sig);
     }
 
@@ -68,7 +68,6 @@ public class UserNode {
         while(true){
             transactionFound = transactionHaving.poll();
             if(transactionFound==null){
-                System.out.println("트랜잭션을 만드는 중에 받은 트랜잭션이 없어서 1초 쉽니다.");
                 Thread.sleep(1000);
                 continue;
             }
@@ -87,7 +86,6 @@ public class UserNode {
         String sig = Base64.getEncoder().encodeToString(signature);
         String trId = SHA256.encrypt(transaction);
 
-        System.out.println("트랜잭션을 만들었습니다.");
         return new TransactionDto(transaction, trId, sig);
     }
 
