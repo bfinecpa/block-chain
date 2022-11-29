@@ -38,6 +38,11 @@ public class FullNode {
         return transactionPool;
     }
 
+    public void addBlockInBlockPool(Block block){
+        blockPool.add(block);
+    }
+
+
     public void consensusLongestChain(Block block) throws NoSuchAlgorithmException, IOException {
         Block lastBlock = myLongestChain.getLastBlock();
 

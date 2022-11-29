@@ -11,6 +11,7 @@ import block.chain.sharedResource.UserResource;
 import block.chain.thread.Master;
 import block.chain.thread.full.MineBlockAndSendIt;
 import block.chain.thread.full.FullReceiveTransaction;
+import block.chain.thread.full.ReceiveBlockAndConsensus;
 import block.chain.thread.user.MakeTransactionAndSendIt;
 import block.chain.thread.user.UserReceiveTransaction;
 
@@ -24,7 +25,7 @@ public class Main {
         FullNode fullNode1 = new FullNode();
         UserNode userNode1 = new UserNode();
 
-        Master master = new Master(List.of(fullNode0));
+        Master master = new Master(List.of(fullNode0, fullNode1));
 
 
         //유저가 pubkey를 알아야해서
@@ -32,8 +33,8 @@ public class Main {
         //연결
         pubKeyList.add(userNode0.getPublicKey());
         userNode0.setUsersPublicKeyList(pubKeyList);
-/*        pubKeyList.add(userNode1.getPublicKey());
-        userNode1.setUsersPublicKeyList(pubKeyList);*/
+        pubKeyList.add(userNode1.getPublicKey());
+        userNode1.setUsersPublicKeyList(pubKeyList);
 
 
         //데이터 전송을 위한 공유 메모리
@@ -44,20 +45,27 @@ public class Main {
 
 
         /**
-         * user0
+         * FullReceiveTransaction, MineBlockAndSendIt 나 말고 연결된 풀 노드를 적어 파라미터로 넘겨야 한다.
+         * FullReceiveTransaction의 의미는 FullReceiveTransactionAndSendIt이다.
+         */
+
+        /**
+         * user0, full0
          */
         MakeTransactionAndSendIt user0MakeTransactionAndSendIt = new MakeTransactionAndSendIt(userNode0,full0Resource);
         FullReceiveTransaction full0ReceiveTransaction = new FullReceiveTransaction(fullNode0, full0Resource, user0Resource, full1Resource);
-        MineBlockAndSendIt full0MineBlockAndSendIt = new MineBlockAndSendIt(fullNode0);
+        MineBlockAndSendIt full0MineBlockAndSendIt = new MineBlockAndSendIt(fullNode0, full1Resource);
         UserReceiveTransaction user0ReceiveTransaction = new UserReceiveTransaction(userNode0, user0Resource);
+        ReceiveBlockAndConsensus full0ReceiveBlock = new ReceiveBlockAndConsensus(full0Resource, fullNode0);
 
         /**
-         * user1
+         * user1, full0
          */
         MakeTransactionAndSendIt user1MakeTransactionAndSendIt = new MakeTransactionAndSendIt(userNode1, full1Resource);
         FullReceiveTransaction full1ReceiveTransaction = new FullReceiveTransaction(fullNode1, full1Resource,user1Resource,full0Resource);
-        MineBlockAndSendIt full1MineBlockAndSendIt = new MineBlockAndSendIt(fullNode1);
+        MineBlockAndSendIt full1MineBlockAndSendIt = new MineBlockAndSendIt(fullNode1 ,full0Resource);
         UserReceiveTransaction user1ReceiveTransaction = new UserReceiveTransaction(userNode1,user1Resource);
+        ReceiveBlockAndConsensus full1ReceiveBlock = new ReceiveBlockAndConsensus(full1Resource, fullNode1);
 
 
 
@@ -65,14 +73,15 @@ public class Main {
         new Thread(user0ReceiveTransaction).start();
         new Thread(full0ReceiveTransaction).start();
         new Thread(full0MineBlockAndSendIt).start();
+        new Thread(full0ReceiveBlock).start();
 
         new Thread(master).start();
 
-  /*      new Thread(user1MakeTransactionAndSendIt).start();
+        new Thread(user1MakeTransactionAndSendIt).start();
         new Thread(user1ReceiveTransaction).start();
         new Thread(full1ReceiveTransaction).start();
-        new Thread(full1MineBlock).start();*/
-
+        new Thread(full1MineBlockAndSendIt).start();
+        new Thread(full1ReceiveBlock).start();
 
 
 
