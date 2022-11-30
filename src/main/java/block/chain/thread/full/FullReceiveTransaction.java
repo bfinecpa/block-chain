@@ -2,8 +2,6 @@ package block.chain.thread.full;
 
 import block.chain.node.FullNode;
 import block.chain.sharedResource.FullResource;
-import block.chain.sharedResource.ResourceTransferredFromUserToFull;
-import block.chain.sharedResource.ResourceTransferredBetweenFull1TAndFull0;
 import block.chain.sharedResource.UserResource;
 import block.chain.transaction.TransactionDto;
 

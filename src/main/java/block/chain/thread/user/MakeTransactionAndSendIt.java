@@ -2,7 +2,6 @@ package block.chain.thread.user;
 
 import block.chain.node.UserNode;
 import block.chain.sharedResource.FullResource;
-import block.chain.sharedResource.ResourceTransferredFromUserToFull;
 
 import java.io.IOException;
 import java.security.InvalidKeyException;
