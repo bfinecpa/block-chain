@@ -147,7 +147,9 @@ public class FullNode {
          * 3) 서명 검사
          */
         if(transactionDto.getTransaction().getOthers().equals("first")){
-            return true;
+            if(verifySign(transactionDto)){
+                return true;
+            }
         }
 
         if(validateLastSellerAndImmutableField(transactionDto) && verifySign(transactionDto)){
