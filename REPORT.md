@@ -2,6 +2,8 @@
 ## 블록체인 프로그램
 ### 학번 : b711206 이름 : 한주덕
 
+#### 프로그램 기능 및 클래스, 함수 설명
+
 (보고서에서 getter, setter의 기능(get...(), set...() 함수)은 단순하게 변수에 값을 집어넣고, 가져오는 기능이므로 설명을 생략하겠습니다. )
 
 이 프로그램은 Main클래스에서 시작한다.
@@ -580,9 +582,456 @@ public Block mining() throws NoSuchAlgorithmException, InvalidKeySpecException, 
         return blockMined;
     }
 ```
-mining 함수는 자신의 트랜잭션 풀에서 8개의 트랜잭션을 가져와서 머클트리로 만든다. 이전 블록의 Hash값 블록 넘버를 만들고, 이를 difficulty함수에 넘겨준다.  
+mining 함수는 자신의 트랜잭션 풀에서 8개의 트랜잭션을 가져와서 머클트리로 만든다.   
+이때, 트랜잭션 풀에서 트랜잭션을 가지고 올때는 검증을 한다.
+검증은 요구사항에 나온 3가지 검증을 한다. 
+이전 블록의 Hash값 블록 넘버를 만들고, 이를 difficulty함수에 넘겨준다.  
 difficulty 함수에서 target number보다 작은 값을 찾으면 해당 블록을 넘겨주고, 최근 채굴한 블록 변수에 넣어준다. 이후 채굴된 블록을 리턴한다.
 
+```java
+public class MerkleTree  implements Serializable {
+
+    private Node root;
 
 
+    public String getRootHashValue(){
+        return root.getHash();
+    }
 
+    // 무조건 2^n개의 트랜잭션만 가져온다.
+    public MerkleTree(List<TransactionDto> transactionDtos) throws NoSuchAlgorithmException, IOException {
+        Queue<Node> dataSet = makeLeafNodes(transactionDtos);
+        while(true){
+            Node node1 = dataSet.poll();
+            Node node2 = dataSet.poll();
+
+            if(node2==null){
+                root = node1;
+                break;
+            }
+
+            NoneLeafNode noneLeafNode = new NoneLeafNode(node1, node2);
+            dataSet.add(noneLeafNode);
+        }
+    }
+
+
+    private Queue<Node> makeLeafNodes(List<TransactionDto> transactionDtos) throws NoSuchAlgorithmException, IOException {
+        Queue<Node> dataSet = new LinkedList<>();
+        for (TransactionDto transactionDto : transactionDtos) {
+            LeafNode leafNode = new LeafNode(transactionDto);
+            dataSet.add(leafNode);
+        }
+        return dataSet;
+    }
+```
+MerkleTree 클래스는 트랜잭션 데이터를 가지고 bottom up 방식으로 트리를 형성한다.
+
+```java
+public boolean validateTransaction(TransactionDto transactionDto) throws NoSuchAlgorithmException, InvalidKeySpecException,
+        IOException, SignatureException, InvalidKeyException {
+
+        /**
+         * 1) 트랜젹션을 통해 판매하려는 물품의 최종 소유자 즉 합의된 마지막 판매의 구매자가 현재 트랜잭션의 input과 같은지
+         * 2) immutable field 가 그 전과 같은지
+         * 3) 서명 검사
+         */
+        if(transactionDto.getTransaction().getOthers().equals("first")){
+            if(verifySign(transactionDto)){
+                return true;
+            }
+        }
+        if(validateLastSellerAndImmutableField(transactionDto) && verifySign(transactionDto)){
+            return true;
+        }
+        return false;
+        }
+```
+검증을 하는데 첫 트랜잭션은 판매가 된 적이 없다. 따라서 첫 트랜잭션은 others필드를 first로 해서 넘기고 이를 검사하여 첫 트랜잭션은 
+검증을 안하고 sig 검사만 진행 후 넘어간다.
+
+```java
+ private boolean validateLastSellerAndImmutableField(TransactionDto transactionDto) {
+        return myLongestChain.validateTransaction(transactionDto);
+    }
+
+public boolean validateTransaction(TransactionDto transactionDto){
+        for(int i = blockChain.size()-1; i>=0; i--){
+        if(i==0){
+        return false;
+        }
+        if(blockChain.get(i).getMerkleTree().validateTransaction(transactionDto)){
+        return true;
+        }
+        }
+        return false;
+        }
+
+public boolean validateTransaction(TransactionDto transactionDto) {
+        Transaction curTransaction = transactionDto.getTransaction();
+        Queue<Node> dataSet = new LinkedList<>();
+        dataSet.add(root);
+        while(true){
+        Node curNode = dataSet.poll();
+        if(curNode==null){
+        return false;
+        }
+        Node left = curNode.getLeft();
+        Node right = curNode.getRight();
+        if(left != null){
+        dataSet.add(left);
+        dataSet.add(right);
+        continue;
+        }
+        LeafNode curLeafNode = (LeafNode) curNode;
+        Transaction transaction = curLeafNode.findTransaction();
+        if(transaction.getIdentifier()==curTransaction.getIdentifier()
+        && transaction.getInput().equals(curTransaction.getOutput())
+        && transaction.compareImmutable(curTransaction)){
+        return true;
+        }
+        }
+        }
+```
+
+validateLastSellerAndImmutableField 함수는 chain에게 일을 넘기는 역할을 한다.  
+Chain의 validateTransaction 함수는 longest chain에 존재하는 블록을 모두 확인 하는 역할을 한다.
+MerkleTree의 validateTransaction 함수는 한 블록의 머클트리에서 갖고 있는 트랜잭션을 가져오고, 트랜잭션 들 중 identifie가 같은지, 그 전 구매자가 현 판매자 public key가 같은지, 
+immutable field가 같은지 확인한다.
+
+```java
+private boolean verifySign(TransactionDto transactionDto) throws NoSuchAlgorithmException, InvalidKeySpecException,
+            InvalidKeyException, IOException, SignatureException {
+
+        Transaction transaction = transactionDto.getTransaction();
+        String pub = transaction.getInput();
+
+        Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
+        EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(pub));
+        KeyFactory keyFactory = KeyFactory.getInstance("EC");
+        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+        ecdsaVerify.initVerify(publicKey);
+        byte[] bytes = ChangeByteWIthObject.convertObjectToBytes(transaction);
+        ecdsaVerify.update(bytes);
+        return ecdsaVerify.verify(Base64.getDecoder().decode(transactionDto.getSig()));
+    }
+```
+verifySign 함수는 자신이 갖고 있는 public key로 Signature을 풀어 풀리면 true를 틀리면 false를 리턴한다.
+
+```java
+ private Block difficulty(Random random, MerkleTree merkleTree, String prevHash, int blockNo) throws NoSuchAlgorithmException, IOException {
+        while(true){
+            long nonce = random.nextLong();
+            Block nextBlock = new Block(blockNo, nonce, prevHash, merkleTree.getRootHashValue(), merkleTree);
+            String encrypt = SHA256.encrypt(nextBlock);
+            for(int i=0; i<64; i++){
+                if(i==5){
+                    return nextBlock;
+                }else{
+                    if(encrypt.charAt(i)!='0'){
+                        break;
+                    }
+                }
+            }
+        }
+    }
+```
+difficulty 함수는 nonce값을 랜덤으로 가져온 후 파라미터와 nonce를 합쳐서 새로운 블록을 생성한다.  
+블록을 생성한 후 해쉬를 하고 해쉬 값이 앞에 0이 5개이면 해당 블록을 출력 리턴한다. 아니면 이를 반복한다.
+
+```java
+public void consensusLongestChain(Block block) throws NoSuchAlgorithmException, IOException {
+        Block lastBlock = myLongestChain.getLastBlock();
+
+        int blockNo = block.getBlockNo();
+        String encrypt = SHA256.encrypt(lastBlock);
+        if(encrypt.equals(block.getPrevHash()) && blockNo==lastBlock.getBlockNo()+1){
+            myLongestChain.addBlock(block);
+            return;
+        }
+        if(blockNo==lastBlock.getBlockNo()+1){
+            myLongestChain.addBlock(block);
+            changeChainBlock();
+        }
+    }
+```
+consensusLongestChain 함수는 자신의 longest chain에 연결할 블록을 파라미터로 가져온다.  
+현재 longest chain에 마지막 블록을 가져오고, 이 블록의 해쉬값과 파라미터 블록의 이전 해쉬값이 같은지, 번호는 +1 되어 있는지, 확인하고 맞으면, 체인에 연결한다.  
+아니면 번호는 다음 번호가 맞는지 확인한다. 번호가 맞으면 가장 빠른 블록이 들어온 것이고 하지만 내가 갖고 있는 longest block과는 다르기 때문에
+들어온 블록을 longest chain에 연결하고, 그 전 블록들을 prevHash에 맞는 것으로 계속 바꿔준다.
+
+```java
+private void changeChainBlock() throws NoSuchAlgorithmException, IOException {
+        Block curBlock = myLongestChain.getLastBlock();
+        while(true){
+            Block prevBlock = myLongestChain.findBlockByNo(curBlock.getBlockNo() - 1);
+            if(prevBlock==null && prevBlock.getBlockNo()==0){
+                break;
+            }
+            if(SHA256.encrypt(prevBlock).equals(curBlock.getPrevHash())){
+                break;
+            }
+            Block blockFound = findBlockByNoByPrevHash(curBlock.getBlockNo()-1, curBlock.getPrevHash());
+            myLongestChain.setBlock(blockFound.getBlockNo(), blockFound);
+            curBlock=blockFound;
+        }
+    }
+```
+changeChainBlock 함수는 현재 마지막 블록을 가지고 연결된 처음 블록까지 이전해쉬값을 맞춰서 블록들을 바꿔준다.
+마지막 블록의 prevHash와 원래 longest chain에 있는 블록 해쉬값과 일치한다면 끝내고 아니라면 일치하는 블록을 보유 하고 있는 블록풀에서 찾은 후 찾은 블록을 longest chain에 번호에 맞게 바꿔준다.
+이를 처음 블록까지 반복 하는 것이다.
+
+```java
+public Block findBlockByNo(int no){
+        if(no==-1){
+            return null;
+        }
+        return blockChain.get(no);
+    }
+
+private Block findBlockByNoByPrevHash(int blockNo, String prevHash) throws NoSuchAlgorithmException, IOException {
+        for (Block block : blockPool) {
+            if(SHA256.encrypt(block).equals(prevHash) && block.getBlockNo()==blockNo){
+                return block;
+            }
+        }
+        return null;
+    }
+```
+findBlockByNo 함수는 블록 넘버로 해당 체인에 있는 블록을 가져오는 역할이다.  
+findBlockByNoByPrevHash 함수는 블록 넘버와 prevHash로 각각 값이 같으면 해당 블록을 가져오는 역할이다.
+
+```java
+package block.chain.thread.full;
+
+import block.chain.Block;
+import block.chain.node.FullNode;
+import block.chain.sharedResource.FullResource;
+
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+
+public class ReceiveBlockAndConsensus implements Runnable{
+
+    private  FullResource fullResource;
+
+    private FullNode fullNode;
+
+    private List<FullResource> otherFullResources = new ArrayList<>();
+
+
+    public ReceiveBlockAndConsensus(FullResource fullResource, FullNode fullNode ,FullResource ...otherResource) {
+        this.fullResource = fullResource;
+        this.fullNode = fullNode;
+        for (FullResource resource : otherResource) {
+            otherFullResources.add(resource);
+        }
+    }
+
+    @Override
+    public void run() {
+        Queue<Block> blocks = fullResource.getBlocks();
+        while(true){
+            Block blockReceived = blocks.poll();
+            if(blockReceived==null){
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }else {
+                try {
+                    List<Block> blockPool = fullNode.getBlockPool();
+                    if(blockPool.contains(blockReceived)){
+                        continue;
+                    }
+                    fullNode.addBlockInBlockPool(blockReceived);
+                    //다른 full node에게 보내 줘야함
+                    for (FullResource otherFullResource : otherFullResources) {
+                        otherFullResource.addBlock(blockReceived);
+                    }
+                    //확인
+                    fullNode.consensusLongestChain(blockReceived);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+}
+```
+ReceiveBlockAndConsensus 클래스는 해당 풀노드와 해당 공유 메모리, 연결된 공유 메모리를 가지고 생성한다.  
+자신의 공유 메모리에 들어온 블록이 없으면 1초 쉬고, 있으면 해당 블록이 자신의 블록 풀에 있는지 확인한다. 있으면 그 블록은 넘어간다
+없으면, 블록을 블록풀에 넣고, 연결된 다른 노드들에게 전달한다. 전달한 후, 자신의 longest chain에 연결한다.
+연결 시에는 consensusLongestChain 함수를 사용한다. 위에서 설명한 것 처럼 모든 조건이 맞으면 블록을 체인에 붙이고 아니면 버린다.
+
+#### 출력을 위한 master 클래스
+
+```java
+package block.chain.thread;
+
+import block.chain.Block;
+import block.chain.Chain;
+import block.chain.Trace;
+import block.chain.merkletree.LeafNode;
+import block.chain.merkletree.Node;
+import block.chain.node.FullNode;
+import block.chain.node.UserNode;
+import block.chain.transaction.Transaction;
+import block.chain.transaction.TransactionDto;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Scanner;
+
+public class Master implements Runnable{
+
+
+    private List<FullNode> fullNodeList;
+
+
+    public Master(List<FullNode> fullNodeList) {
+        this.fullNodeList = fullNodeList;
+    }
+
+    @Override
+    public void run() {
+        while(true){
+            Scanner scanner = new Scanner(System.in);
+            String input = scanner.nextLine();
+            if(input.contains("snapshot myBlockChain")){
+                if(input.contains("ALL")){
+                    for (int i=0; i<fullNodeList.size(); i++){
+                        System.out.println("F"+i+": ");
+                        printFullNode(fullNodeList.get(i));
+                    }
+                }
+                else if (input.contains("F")) {
+                    int f = input.indexOf("F");
+                    char c = input.charAt(f+1);
+                    int numericValue = Character.getNumericValue(c);
+                    FullNode fullNode = fullNodeList.get(numericValue);
+                    printFullNode(fullNode);
+                }
+            }
+            else if (input.contains("snapshot trPool")) {
+                int f = input.indexOf("F");
+                char c = input.charAt(f+1);
+                int numericValue = Character.getNumericValue(c);
+                FullNode fullNode = fullNodeList.get(numericValue);
+                List<TransactionDto> transactionDtoList = new ArrayList<>(fullNode.getTransactionPool());
+                for (TransactionDto transactionDto : transactionDtoList) {
+                    System.out.println("TrId : " + transactionDto.getTrId());
+                    System.out.println("Input : " + transactionDto.getTransaction().getInput());
+                    System.out.println("Output : " + transactionDto.getTransaction().getOutput());
+                    System.out.println("Identifier : " + transactionDto.getTransaction().getIdentifier());
+                    System.out.println("ModelNo : " + transactionDto.getTransaction().getModelNo());
+                    System.out.println("Manufactured Date : " + transactionDto.getTransaction().getManufacturedDate());
+                    System.out.println("Trading Date : " + transactionDto.getTransaction().getTradingDate());
+                    System.out.println("Others : " + transactionDto.getTransaction().getOthers());
+                    System.out.println("--------------------------------------------------------------");
+                }
+            }
+            else if (input.contains("verifyLastTr")){
+                int f = input.indexOf("F");
+                char c = input.charAt(f+1);
+                int numericValue = Character.getNumericValue(c);
+                FullNode fullNode = fullNodeList.get(numericValue);
+                Block lastMiningBlock = fullNode.getLastMiningBlock();
+                List<Node> leafNodes = new ArrayList<>(lastMiningBlock.getMerkleTree().getLeafNode());
+                LeafNode leafNode = (LeafNode)leafNodes.get(leafNodes.size() - 1);
+                TransactionDto transactionDto = leafNode.getTransactionDto();
+                Transaction lastTransaction = fullNode.printValidation(transactionDto);
+                System.out.println("last transaction’s output : " + lastTransaction.getOutput());
+                System.out.println("trID’s input : " + transactionDto.getTransaction().getInput());
+                System.out.println("last transaction’s " +
+                        "\n Identifier : "+ lastTransaction.getIdentifier() +
+                        "\n ModelNo : " + lastTransaction.getModelNo() +
+                        "\n Manufactured Date : " + lastTransaction.getManufacturedDate() +
+                        "\n Trading Date : " + lastTransaction.getTradingDate() +
+                        "\n Others : " + lastTransaction.getOthers()
+                );
+                System.out.println("trID’s " +
+                        "\n Identifier : "+ transactionDto.getTransaction().getIdentifier() +
+                        "\n ModelNo : " + transactionDto.getTransaction().getModelNo() +
+                        "\n Manufactured Date : " + transactionDto.getTransaction().getManufacturedDate() +
+                        "\n Trading Date : " + transactionDto.getTransaction().getTradingDate() +
+                        "\n Others : " + transactionDto.getTransaction().getOthers()
+                );
+                System.out.println("trID’s signature: " + transactionDto.getSig());
+                System.out.println("verifying using trID’s input: " + transactionDto.getTransaction().getInput());
+                System.out.println("verified successfully!!");
+            }
+            else if (input.contains("trace")) {
+                int i = input.indexOf("<");
+                int i1 = input.indexOf(">");
+                String identifier = input.substring(i + 1, i1);
+                FullNode fullNode = fullNodeList.get(0);
+                Chain myLongestChain = fullNode.getMyLongestChain();
+                List<Trace> traces = myLongestChain.printTransactionOfIdentifierAll(identifier);
+                if(input.contains("ALL")){
+                    for (Trace trace : traces) {
+                        System.out.println("blockNo : "+ trace.getBlockNo()+" trId: " +
+                                "\n Input : " + trace.getTransaction().getInput() +
+                                "\n Output : " + trace.getTransaction().getOutput()+
+                                "\n Identifier : " + trace.getTransaction().getIdentifier()+
+                                "\n ModelNo : " + trace.getTransaction().getModelNo()+
+                                "\n Manufactured Date : " +trace.getTransaction().getManufacturedDate()+
+                                "\n Trading Date : " +trace.getTransaction().getTradingDate()+
+                                "\n Others : " + trace.getTransaction().getOthers()
+                        );
+
+                    }
+                }
+                else{
+                    char c = input.charAt(input.length() - 1);
+                    int numericValue = Character.getNumericValue(c);
+                    for (int j=0; j<numericValue; j++){
+                        Trace trace = traces.get(j);
+                        System.out.println("blockNo : "+ trace.getBlockNo()+" trId: " +
+                                "\n Input : " + trace.getTransaction().getInput() +
+                                "\n Output : " + trace.getTransaction().getOutput()+
+                                "\n Identifier : " + trace.getTransaction().getIdentifier()+
+                                "\n ModelNo : " + trace.getTransaction().getModelNo()+
+                                "\n Manufactured Date : " +trace.getTransaction().getManufacturedDate()+
+                                "\n Trading Date : " +trace.getTransaction().getTradingDate()+
+                                "\n Others : " + trace.getTransaction().getOthers()
+                        );
+                    }
+                }
+
+            }
+
+        }
+    }
+
+    private static void printFullNode(FullNode fullNode) {
+        List<Block> blockChain = fullNode.getMyLongestChain().getBlockChain();
+        for (int i=1; i<blockChain.size(); i++){
+            System.out.print("blockNo : " + blockChain.get(i).getBlockNo());
+            System.out.print("  |  ");
+            System.out.print("prevHash : "+ blockChain.get(i).getPrevHash());
+            System.out.print("  |  ");
+            System.out.print("nonce : "+blockChain.get(i).getNonce());
+            System.out.print("  |  ");
+            System.out.println("Merkle-root : "+blockChain.get(i).getMerkleTreeRoot());
+            Queue<Node> leafNodeQueue = blockChain.get(i).getMerkleTree().getLeafNode();
+            List<Node> leafNode = new ArrayList<>(leafNodeQueue);
+            for(int j=0; j<leafNode.size();j++){
+                LeafNode poll = (LeafNode) leafNode.get(j);
+                System.out.println("trId" + (j+1)+"번 : "+ poll.getTransactionDto().getTrId() );
+            }
+
+            System.out.println("--------------------------------------------------------------");
+        }
+    }
+}
+```
+Master 클래스는 가동하려는 풀노드들을 리스트 형태로 받아서 생성한다.  
+입력을 받으면 입력을 바탕으로 데이터를 가져와서 요구사항의 맞는 형태로 출력한다.
